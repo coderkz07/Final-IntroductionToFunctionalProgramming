@@ -25,6 +25,8 @@ npm test
 
 The default engine is Chromium. Set `STUDYFLOW_BROWSER` to `firefox` or `webkit` to run the same tests there. Use `STUDYFLOW_BROWSER_PATH` to point to an installed browser. Playwright may need additional system packages on Linux.
 
+For the static Pages build, set `STUDYFLOW_STATIC=1` and set `STUDYFLOW_URL` to its base URL. The same browser suite checks direct links and planner interactions.
+
 Each browser test starts with an empty profile and uses November 16, 2026, as the local date so the deadline and weekend checks repeat consistently.
 
 ## What the tests cover

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>StudyFlow</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.12" />
+    <ProjectReference Include="../StudyFlow.Core/StudyFlow.Core.csproj" />
+  </ItemGroup>
+
+  <!-- Share the UI and storage code with the ASP.NET Core host. -->
+  <ItemGroup>
+    <Compile Include="../StudyFlow/PlannerState.cs" Link="PlannerState.cs" />
+    <Compile Include="../StudyFlow/Components/Pages/Home.razor.cs" Link="Components/Pages/Home.razor.cs" />
+    <Content Include="../StudyFlow/Components/**/*.razor"
+             Exclude="../StudyFlow/Components/App.razor;../StudyFlow/Components/Pages/Error.razor;../StudyFlow/Components/Layout/ReconnectModal.razor"
+             Link="Components/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Content Include="../StudyFlow/wwwroot/**/*"
+             Link="wwwroot/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

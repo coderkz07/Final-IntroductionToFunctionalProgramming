@@ -7,7 +7,8 @@ import { after, before, test } from "node:test";
 const require = createRequire(import.meta.url);
 const playwright = require(process.env.STUDYFLOW_PLAYWRIGHT_PATH || "playwright");
 const engine = process.env.STUDYFLOW_BROWSER || "chromium";
-const base = process.env.STUDYFLOW_URL || "http://127.0.0.1:5078";
+const base = (process.env.STUDYFLOW_URL || "http://127.0.0.1:5078").replace(/\/+$/, "");
+const staticSite = process.env.STUDYFLOW_STATIC === "1";
 const key = "studyflow.workspace.v1";
 const screenshots = process.env.STUDYFLOW_SCREENSHOTS;
 const fixedTime = new Date("2026-11-16T12:00:00Z");
@@ -38,7 +39,7 @@ async function withPage(run, viewport = { width: 1440, height: 900 }) {
 }
 
 async function openDashboard(page) {
-    await page.goto(base);
+    await page.goto(base + "/");
     await page.getByRole("button", { name: "New assignment" }).waitFor();
     await page.getByRole("heading", { name: "Dashboard", exact: true }).waitFor();
 }
@@ -68,12 +69,17 @@ async function capture(page, name) {
     await page.screenshot({ path: join(screenshots, name + ".png") });
 }
 
-test("serves the health endpoint, direct routes, static assets, and a 404", async () => {
+test("serves direct routes, static assets, and a 404", async () => {
     await withPage(async page => {
-        const health = await page.request.get(base + "/health");
-        assert.equal(health.status(), 200);
-        assert.equal(await health.text(), "Healthy");
+        if (!staticSite) {
+            const health = await page.request.get(base + "/health");
+            assert.equal(health.status(), 200);
+            assert.equal(await health.text(), "Healthy");
+        }
         assert.equal((await page.request.get(base + "/app.css")).status(), 200);
+        const assignments = await page.goto(base + "/assignments");
+        assert.equal(assignments.status(), 200);
+        await page.getByRole("heading", { name: "Assignment list" }).waitFor();
         const schedule = await page.goto(base + "/schedule");
         assert.equal(schedule.status(), 200);
         await page.getByRole("heading", { name: "Two-week plan" }).waitFor();
@@ -198,7 +204,7 @@ test("rejects a stale tab write without erasing the newer plan", async () => {
 test("recovers unreadable local data without overwriting it on load", async () => {
     await withPage(async page => {
         await page.addInitScript(storageKey => localStorage.setItem(storageKey, "{broken"), key);
-        await page.goto(base);
+        await page.goto(base + "/");
         await page.getByRole("heading", { name: "Couldn’t open your plan" }).waitFor();
         assert.equal(await page.evaluate(storageKey => localStorage.getItem(storageKey), key), "{broken");
         await page.getByRole("button", { name: "Reset storage" }).click();

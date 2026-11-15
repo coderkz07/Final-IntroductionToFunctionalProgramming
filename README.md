@@ -36,7 +36,17 @@ It schedules unfinished assignments in deadline order, with higher priority firs
 
 A workspace holds up to 200 assignments and 2,000 study sessions. The planner groups the sessions, sorts the assignments, and checks eligible work for each of the next 14 days.
 
-Build a release with `dotnet publish src/StudyFlow -c Release`. For deployment, keep HTTPS and WebSocket forwarding enabled. The app uses a live Blazor connection and browser storage. `GET /health` returns `200 Healthy` when the server responds.
+Build a release with `dotnet publish src/StudyFlow -c Release`. For deployment, keep HTTPS and WebSocket forwarding enabled. The ASP.NET Core app uses a live Blazor connection and browser storage. `GET /health` returns `200 Healthy` when the server responds.
+
+## GitHub Pages
+
+The Pages workflow publishes a standalone WebAssembly build from `src/StudyFlow.Pages` and sets its base URL to the repository path. Both builds use the same planner components and browser storage. Run these commands and open the [local static preview](http://127.0.0.1:5081/).
+
+```sh
+dotnet publish src/StudyFlow.Pages -c Release -o artifacts/pages
+python scripts/prepare-pages.py artifacts/pages/wwwroot /
+python -m http.server 5081 --bind 127.0.0.1 --directory artifacts/pages/wwwroot
+```
 
 - [Tests and rubric checklist](docs/verification.md)
 - [Defense slides and speaker notes](docs/StudyFlow-Defense.pptx)
