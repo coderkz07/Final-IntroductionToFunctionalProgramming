@@ -1,0 +1,70 @@
+@if (Plan.Gaps.Length > 0)
+{
+    <section class="panel gap-panel" aria-labelledby="gaps-title">
+        <div class="panel-heading">
+            <h2 id="gaps-title">Unscheduled work</h2>
+        </div>
+        <ul class="gap-list">
+            @foreach (var gap in Plan.Gaps)
+            {
+                <li @key="gap.Assignment.Id">
+                    <div><strong>@gap.Assignment.Title</strong><span class="muted">@Reason(gap.Reason)</span></div>
+                    <span class="gap-pill">@gap.Minutes min</span>
+                </li>
+            }
+        </ul>
+    </section>
+}
+<section class="panel" aria-labelledby="schedule-title">
+    <div class="panel-heading">
+        <div>
+            <h2 id="schedule-title">Two-week plan</h2>
+            <span class="muted">@Plan.Days[0].Date.ToString("MMM d", CultureInfo.InvariantCulture) – @Plan.Days[^1].Date.ToString("MMM d, yyyy", CultureInfo.InvariantCulture)</span>
+        </div>
+        <button class="button secondary" type="button" @onclick="OnSettings">Change budget</button>
+    </div>
+    <ol class="day-list">
+        @foreach (var day in Plan.Days)
+        {
+            <li class="schedule-day" @key="day.Date">
+                <div class="day-label">
+                    <strong>@(day.Date == Plan.Days[0].Date ? "Today" : day.Date.ToString("dddd", CultureInfo.InvariantCulture))</strong>
+                    <span class="muted">@day.Date.ToString("MMM d", CultureInfo.InvariantCulture)</span>
+                </div>
+                <div class="day-blocks">
+                    @if (day.Blocks.Length == 0)
+                    {
+                        <span class="muted">@(day.Enabled ? "Nothing planned" : "Rest day")</span>
+                    }
+                    else
+                    {
+                        <ul>
+                            @foreach (var block in day.Blocks)
+                            {
+                                <li @key="block.Assignment.Id">
+                                    <span>@block.Assignment.Title</span><strong>@block.Minutes min</strong>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+                <div class="day-total">
+                    <strong>@day.Planned min planned</strong>
+                    <span class="muted">@day.Logged min logged · @day.Budget min budget</span>
+                </div>
+            </li>
+        }
+    </ol>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public StudyPlan Plan { get; set; } = default!;
+    [Parameter] public EventCallback OnSettings { get; set; }
+
+    private static string Reason(GapReason reason) => reason switch
+    {
+        GapReason.Overdue => "Deadline passed",
+        GapReason.DeadlineCapacity => "Not enough time before the deadline",
+        _ => "Past this two-week plan"
+    };
+}

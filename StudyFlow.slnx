@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/StudyFlow.Core/StudyFlow.Core.csproj" />
+    <Project Path="src/StudyFlow/StudyFlow.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/StudyFlow.Tests/StudyFlow.Tests.csproj" />
+  </Folder>
+</Solution>

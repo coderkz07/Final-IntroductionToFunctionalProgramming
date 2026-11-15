@@ -1,0 +1,21 @@
+# Build and test output
+[Bb]in/
+[Oo]bj/
+artifacts/
+TestResults/
+coverage/
+node_modules/
+
+# Local configuration
+.env
+.env.*
+!.env.example
+.vs/
+.idea/
+*.suo
+*.user
+*.sln.docstates
+
+# Operating system files
+.DS_Store
+Thumbs.db

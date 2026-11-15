@@ -1,0 +1,231 @@
+@page "/"
+@page "/assignments"
+@page "/schedule"
+@inject NavigationManager Navigation
+@inject IJSRuntime Js
+
+<PageTitle>@Heading · StudyFlow</PageTitle>
+
+<a class="skip-link" href="#workspace">Skip to workspace</a>
+<header class="site-header">
+    <div class="site-bar">
+        <a class="brand" href="./">
+            <img src="studyflow-mark.png" alt="" width="42" height="42" />
+            <span>StudyFlow</span>
+        </a>
+        <nav class="workspace-nav" aria-label="Workspace">
+            <NavLink href="" aria-current="@(View == "" ? "page" : null)" Match="NavLinkMatch.All">Dashboard</NavLink>
+            <NavLink href="assignments" aria-current="@(View == "assignments" ? "page" : null)">Assignments</NavLink>
+            <NavLink href="schedule" aria-current="@(View == "schedule" ? "page" : null)">Schedule</NavLink>
+        </nav>
+        @if (Ready)
+        {
+            <button type="button" class="settings-button" @onclick="OpenSettings">Settings</button>
+        }
+    </div>
+</header>
+
+<main class="workspace" id="workspace" tabindex="-1">
+    <header class="workspace-header">
+        <div>
+            @if (Ready)
+            {
+                <p class="today-label">@State.Today.ToString("dddd, MMMM d", CultureInfo.InvariantCulture)</p>
+            }
+            <h1 tabindex="-1">@Heading</h1>
+        </div>
+        @if (Ready)
+        {
+            <div class="header-actions">
+                <button class="button secondary" type="button" @onclick="OpenLog" disabled="@(!State.Plan.Assignments.Any(item => !item.IsComplete))">Log time</button>
+                <button class="button primary" type="button" @onclick="(() => OpenAssignment(null))"><span aria-hidden="true">+</span> New assignment</button>
+            </div>
+        }
+    </header>
+
+    @if (!loaded)
+    {
+        <p role="status" class="notice">Loading your plan…</p>
+    }
+    else if (State.LoadError is not null)
+    {
+        <section class="panel recovery-panel">
+            <h2>Couldn’t open your plan</h2>
+            <p role="alert">@State.LoadError</p>
+            <div class="header-actions">
+                <button class="button secondary" disabled="@busy" @onclick="ReloadAsync">Retry</button>
+                @if (State.HasRecoveryData)
+                {
+                    <button class="button secondary" @onclick="DownloadAsync">Download saved data</button>
+                    <button class="button danger" @onclick="(() => Open(DialogKind.Reset))">Reset storage</button>
+                }
+            </div>
+        </section>
+    }
+    else
+    {
+        @switch (View)
+        {
+            case "assignments":
+                <div class="panel filters">
+                    <label>Search assignments
+                        <input type="search" @bind="query" @bind:event="oninput" maxlength="100" placeholder="Title or subject" />
+                    </label>
+                    <label><span id="assignment-status-label">Status</span>
+                        <select @bind="filter" aria-labelledby="assignment-status-label">
+                            <option value="all">All statuses</option>
+                            <option value="open">Open</option>
+                            <option value="overdue">Overdue</option>
+                            <option value="complete">Complete</option>
+                        </select>
+                    </label>
+                </div>
+                <AssignmentList Title="Assignment list" Items="Filtered" Today="State.Today"
+                                EmptyMessage="No assignments match these filters." Edit="EditAssignment" />
+                <section class="panel history-panel" aria-labelledby="history-title">
+                    <div class="panel-heading">
+                        <h2 id="history-title">Study history</h2>
+                    </div>
+                    @if (History.Length == 0)
+                    {
+                        <p class="empty-inline">No sessions logged.</p>
+                    }
+                    else
+                    {
+                        <ul class="history-list">
+                            @foreach (var entry in History.Take(historyCount))
+                            {
+                                <li @key="entry.Session.Id">
+                                    <div><strong>@entry.Title</strong><span class="muted">@entry.Session.Date.ToString("MMM d, yyyy", CultureInfo.InvariantCulture)</span></div>
+                                    <span>@entry.Session.Minutes min</span>
+                                    <button class="icon-button" type="button" aria-label="@($"Remove {entry.Session.Minutes}-minute session for {entry.Title}")" @onclick="(() => ConfirmSession(entry.Session.Id))">×</button>
+                                </li>
+                            }
+                        </ul>
+                        @if (History.Length > historyCount)
+                        {
+                            <button class="button secondary history-more" type="button" @onclick="(() => historyCount += 15)">Show more</button>
+                        }
+                    }
+                </section>
+                break;
+            case "schedule":
+                <ScheduleView Plan="State.Plan" OnSettings="OpenSettings" />
+                break;
+            default:
+                @if (!State.Workspace.Assignments.IsEmpty)
+                {
+                    <ul class="workload" aria-label="Workload">
+                        <li><strong>@OpenCount</strong> open</li>
+                        <li><strong>@DueSoon</strong> due in 7 days</li>
+                        @if (OverdueCount > 0)
+                        {
+                            <li class="warn-text"><strong>@OverdueCount</strong> overdue</li>
+                        }
+                        <li><strong>@FormatMinutes(Remaining)</strong> left to study</li>
+                    </ul>
+                }
+                <div class="dashboard-grid">
+                    @if (State.Workspace.Assignments.IsEmpty)
+                    {
+                        <section class="panel empty-start">
+                            <h2>No assignments yet</h2>
+                            <button class="button secondary" disabled="@busy" @onclick="LoadExampleAsync">Load example plan</button>
+                        </section>
+                    }
+                    else
+                    {
+                        <AssignmentList Title="Assignments to do" Items="Upcoming" Today="State.Today"
+                                        EmptyMessage="You’re caught up." ShowLink Edit="EditAssignment" />
+                    }
+                    <WeekChart Days="State.Plan.Days" />
+                </div>
+                break;
+        }
+    }
+    <div class="feedback" role="status">@notice</div>
+    @if (pageError is not null)
+    {
+        <p class="notice error" role="alert">@pageError</p>
+    }
+</main>
+
+@if (dialog != DialogKind.None)
+{
+    <PlannerDialog @key="dialog" Title="@DialogTitle" OnClose="CloseAsync" Busy="busy">
+        @if (dialogError is not null)
+        {
+            <p class="notice error" role="alert">@dialogError</p>
+        }
+        @switch (dialog)
+        {
+            case DialogKind.Assignment:
+                <form @onsubmit="SaveAssignmentAsync" @onsubmit:preventDefault>
+                    <fieldset disabled="@busy" class="form-fields">
+                        <label>Assignment title <input @bind="title" maxlength="100" required autofocus /></label>
+                        <label>Subject <input @bind="subject" maxlength="48" required /></label>
+                        <div class="form-row">
+                            <label>Due date <input type="date" @ref="dueInput" value="@FormatDate(due)" min="2000-01-01" max="2100-12-31" required /></label>
+                            <label>Estimate (minutes) <input type="number" @bind="estimate" min="15" max="2400" required /></label>
+                        </div>
+                        <label>Priority
+                            <select @bind="priority">
+                                <option value="@Priority.Low">Low</option>
+                                <option value="@Priority.Normal">Normal</option>
+                                <option value="@Priority.High">High</option>
+                            </select>
+                        </label>
+                    </fieldset>
+                    <div class="dialog-actions">
+                        @if (selectedId is not null)
+                        {
+                            <button type="button" class="button danger" disabled="@busy" @onclick="ConfirmAssignment">Delete</button>
+                        }
+                        <button type="submit" class="button primary" disabled="@busy">Save assignment</button>
+                    </div>
+                </form>
+                break;
+            case DialogKind.Log:
+                <form @onsubmit="LogAsync" @onsubmit:preventDefault>
+                    <fieldset disabled="@busy" class="form-fields">
+                        <label>Assignment
+                            <select @bind="logId" autofocus>
+                                @foreach (var item in State.Plan.Assignments.Where(item => !item.IsComplete))
+                                {
+                                    <option value="@item.Assignment.Id">@item.Assignment.Title (@item.Remaining min left)</option>
+                                }
+                            </select>
+                        </label>
+                        <div class="form-row">
+                            <label>Study date <input type="date" @ref="logDateInput" value="@IsoToday" min="2000-01-01" max="@IsoToday" required /></label>
+                            <label>Minutes studied <input type="number" @bind="logMinutes" min="1" max="480" required /></label>
+                        </div>
+                    </fieldset>
+                    <div class="dialog-actions"><button type="submit" class="button primary" disabled="@busy">Save session</button></div>
+                </form>
+                break;
+            case DialogKind.Settings:
+                <form @onsubmit="SaveSettingsAsync" @onsubmit:preventDefault>
+                    <fieldset disabled="@busy" class="form-fields">
+                        <label>Daily budget (minutes) <input type="number" @bind="budget" min="15" max="480" required autofocus /></label>
+                        <label class="checkbox-label"><input type="checkbox" @bind="weekends" /> Plan sessions on weekends</label>
+                    </fieldset>
+                    <div class="dialog-actions"><button type="submit" class="button primary" disabled="@busy">Save settings</button></div>
+                </form>
+                <section class="backup-panel" aria-labelledby="backup-title">
+                    <h3 id="backup-title">Backups</h3>
+                    <p class="muted">Your plan is saved in this browser.</p>
+                    <button class="button secondary" type="button" disabled="@busy" @onclick="DownloadAsync">Download backup</button>
+                    <label>Choose a backup to restore <InputFile OnChange="ChooseBackupAsync" accept=".json,application/json" disabled="@busy" /></label>
+                </section>
+                break;
+            default:
+                <p>@ConfirmationText</p>
+                <div class="dialog-actions">
+                    <button class="button secondary" type="button" disabled="@busy" @onclick="CloseAsync" autofocus>Cancel</button>
+                    <button class="button danger solid" type="button" disabled="@busy" @onclick="ConfirmAsync">@ConfirmLabel</button>
+                </div>
+                break;
+        }
+    </PlannerDialog>
+}

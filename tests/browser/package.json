@@ -1,0 +1,7 @@
+{
+  "name": "studyflow-browser-tests",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test planner.test.mjs" },
+  "devDependencies": { "playwright": "1.62.1" }
+}

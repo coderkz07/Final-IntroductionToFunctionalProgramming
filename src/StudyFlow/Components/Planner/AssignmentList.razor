@@ -1,0 +1,44 @@
+<section class="panel assignment-panel" aria-labelledby="assignments-title">
+    <div class="panel-heading">
+        <h2 id="assignments-title">@Title</h2>
+        @if (ShowLink)
+        {
+            <a class="text-link" href="assignments">View all</a>
+        }
+    </div>
+    @if (Items.Count == 0)
+    {
+        <p class="empty-inline">@EmptyMessage</p>
+    }
+    else
+    {
+        <ul class="assignment-list">
+            @foreach (var item in Items)
+            {
+                var assignment = item.Assignment;
+                var overdue = !item.IsComplete && assignment.Due < Today;
+                <li class="assignment-row" @key="assignment.Id">
+                    <div class="assignment-info">
+                        <strong>@assignment.Title</strong>
+                        <span class="muted">@assignment.Subject · @assignment.Priority priority</span>
+                    </div>
+                    <div class="assignment-date">
+                        <time class="@(overdue ? "warn-text" : "")" datetime="@assignment.Due.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)">@assignment.Due.ToString("MMM d, yyyy", CultureInfo.InvariantCulture)</time>
+                        <span class="muted">@(item.IsComplete ? "Complete" : $"{item.Remaining} min left")</span>
+                    </div>
+                    <button type="button" class="edit-button" aria-label="Edit @assignment.Title"
+                            @onclick="() => Edit.InvokeAsync(assignment)">Edit</button>
+                </li>
+            }
+        </ul>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<AssignmentProgress> Items { get; set; } = [];
+    [Parameter, EditorRequired] public DateOnly Today { get; set; }
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter] public string EmptyMessage { get; set; } = "No assignments to show.";
+    [Parameter] public bool ShowLink { get; set; }
+    [Parameter] public EventCallback<Assignment> Edit { get; set; }
+}

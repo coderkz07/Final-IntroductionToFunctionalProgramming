@@ -1,0 +1,34 @@
+<section class="panel study-time" aria-labelledby="study-time-title">
+    <div class="panel-heading">
+        <h2 id="study-time-title">Study time</h2>
+        <a class="text-link" href="schedule">Full schedule</a>
+    </div>
+    <div class="day-budget">
+        <p class="today-planned"><strong>@Today.Planned</strong> min planned today</p>
+        @if (Today.Budget > 0)
+        {
+            <progress value="@Math.Min(Today.Logged, Today.Budget)" max="@Today.Budget"
+                      aria-label="Minutes logged against today’s budget"></progress>
+        }
+        <p class="muted">@Today.Logged min logged <span aria-hidden="true">/</span> @Today.Budget min budget</p>
+    </div>
+    <div class="weekly-plan">
+        <h3 id="week-title">Next 7 days</h3>
+        <ol class="week-chart" aria-labelledby="week-title">
+            @foreach (var day in Days.Take(7))
+            {
+                var height = day.Budget == 0 ? 0 : day.Planned * 100 / day.Budget;
+                <li class="chart-day" aria-label="@($"{day.Date:dddd, MMMM d}: {day.Planned} minutes planned")">
+                    <strong>@day.Planned</strong>
+                    <div class="bar-track" aria-hidden="true"><div class="bar-fill" style="height: @(height)%"></div></div>
+                    <span>@day.Date.ToString("ddd", CultureInfo.InvariantCulture)</span>
+                </li>
+            }
+        </ol>
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<StudyDay> Days { get; set; } = [];
+    private StudyDay Today => Days[0];
+}
